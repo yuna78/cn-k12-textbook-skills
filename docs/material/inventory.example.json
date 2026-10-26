@@ -1,0 +1,18 @@
+{
+  "title": "国家中小学智慧教育平台 · 九年级教材（11 册）",
+  "subtitle": "上海五·四学制 · 2026-2027 学年 · 共 1509 页 / 约 1.0 GB · 全部从 basic.smartedu.cn 下载",
+  "books": [
+    {"subject": "语文", "volume": "上册", "edition": "统编版（五·四学制）· 人民教育出版社", "pages": 170, "size": "116 MiB"},
+    {"subject": "数学", "volume": "上册", "edition": "沪教版（五·四学制）· 上海教育出版社", "pages": 162, "size": "81 MiB"},
+    {"subject": "英语", "volume": "上册", "edition": "沪教版·牛津上海版（五·四学制）· 上海教育出版社", "pages": 158, "size": "111 MiB"},
+    {"subject": "物理", "volume": "上册", "edition": "沪科技版（五·四学制）· 上海科学技术出版社", "pages": 129, "size": "85 MiB"},
+    {"subject": "化学", "volume": "全一册", "edition": "沪科技版（五·四学制）· 上海科学技术出版社", "pages": 154, "size": "109 MiB"},
+    {"subject": "历史", "volume": "上册", "edition": "统编版（五·四学制）· 人民教育出版社", "pages": 138, "size": "100 MiB"},
+    {"subject": "道法", "volume": "上册", "edition": "统编版（五·四学制）· 人民教育出版社", "pages": 118, "size": "72 MiB"},
+    {"subject": "语文", "volume": "下册", "edition": "统编版（五·四学制）· 人民教育出版社", "pages": 158, "size": "108 MiB"},
+    {"subject": "物理", "volume": "下册", "edition": "沪科技版（五·四学制）· 上海科学技术出版社", "pages": 105, "size": "67 MiB"},
+    {"subject": "历史", "volume": "下册", "edition": "统编版（五·四学制）· 人民教育出版社", "pages": 119, "size": "86 MiB"},
+    {"subject": "道法", "volume": "下册", "edition": "统编版（五·四学制）· 人民教育出版社", "pages": 98, "size": "59 MiB"}
+  ],
+  "footnote": "每一本都校验过：%PDF 头 + %%EOF 尾 + pdfinfo 页数 + 页图越界探测（第 n+1 页返回 403）；下载走 fetch-pdf，支持断点续传与字节数比对。数学九下 / 英语九下平台未上架，用学校纸本。"
+}

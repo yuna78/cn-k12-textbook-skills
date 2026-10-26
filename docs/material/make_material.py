@@ -1,0 +1,451 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""make_material.py — 生成公众号/README 用的配图（可复现）。
+
+做五张图，全部来自**真实跑出来的结果**，不是画的示意图：
+
+    01-教材目录.png     真实下载下来的教材清单（数据由 --inventory 传 JSON）
+    02-知识单元.png     真实的单元 md（frontmatter + 页码锚点，锚点高亮）
+    03-检索与引用.png   真实的 judge / search / cite 终端输出
+    04-闸门对比.png     真实 verify：正确引用通过 vs 编造引用被拦下
+    05-流程与闸门.png   三个 skill 与三道闸门的结构图
+
+依赖：Chrome（headless 截图）+ Pillow（裁白边）+ poppler（跑流水线）。
+用法：
+    python3 make_material.py --pdf books/历史_第一周基本史实过关.pdf
+    python3 make_material.py --pdf books/x.pdf --inventory inventory.json --out docs/material
+
+`--inventory` 格式见 inventory.example.json；不传则跳过 01。
+"""
+from __future__ import annotations
+
+import argparse
+import html
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+REPO = HERE.parent.parent
+CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+FONT = "-apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
+MONO = "'SF Mono', Menlo, Consolas, monospace"
+
+BG_LIGHT = "#ffffff"
+INK = "#1a1a1a"
+MUTED = "#6b7280"
+LINE = "#e5e7eb"
+ACCENT = "#2563eb"
+GREEN = "#059669"
+RED = "#dc2626"
+
+
+# ---------- 渲染 ----------
+
+def render(html_text: str, out_png: Path, width: int = 1240, pad: int = 40) -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="mat-"))
+    html_file = tmp / "p.html"
+    html_file.write_text(html_text, encoding="utf-8")
+    raw = tmp / "shot.png"
+    cmd = [
+        CHROME, "--headless=new", "--no-sandbox", "--disable-gpu",
+        "--hide-scrollbars", "--force-device-scale-factor=2",
+        "--disable-crash-reporter", "--disable-breakpad",
+        f"--crash-dumps-dir={tmp}", f"--user-data-dir={tmp / 'ud'}",
+        f"--window-size={width},2600",
+        f"--screenshot={raw}", html_file.as_uri(),
+    ]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if not raw.exists():
+        print(f"Chrome 截图失败：{r.stderr[-400:]}", file=sys.stderr)
+        raise SystemExit(4)
+
+    # 裁掉底部空白：找出最后一行非背景像素
+    try:
+        from PIL import Image
+        im = Image.open(raw).convert("RGB")
+        w, h = im.size
+        px = im.load()
+        bg = px[2, h - 2]
+        last = h - 1
+        for y in range(h - 1, 0, -1):
+            row_has = any(px[x, y] != bg for x in range(0, w, 7))
+            if row_has:
+                last = y
+                break
+        bottom = min(h, last + pad * 2)
+        im.crop((0, 0, w, bottom)).save(out_png)
+    except ImportError:
+        shutil.copy(raw, out_png)
+    print(f"  ✓ {out_png.relative_to(REPO) if out_png.is_relative_to(REPO) else out_png}")
+    shutil.rmtree(tmp, ignore_errors=True)
+
+
+def page(body: str, width: int = 1240, bg: str = BG_LIGHT,
+         padding: str = "44px 48px", extra_css: str = "") -> str:
+    return f"""<!doctype html><html><head><meta charset="utf-8"><style>
+    * {{ box-sizing: border-box; }}
+    body {{ margin:0; width:{width}px; background:{bg}; color:{INK};
+           font-family:{FONT}; padding:{padding}; -webkit-font-smoothing:antialiased; }}
+    {extra_css}
+    </style></head><body>{body}</body></html>"""
+
+
+def esc(s: str) -> str:
+    return html.escape(s)
+
+
+# ---------- 01 教材目录 ----------
+
+def fig_inventory(inv: dict, out: Path) -> None:
+    rows = []
+    for i, b in enumerate(inv["books"], 1):
+        rows.append(f"""<tr>
+          <td class="num">{i}</td>
+          <td class="subj">{esc(b['subject'])}</td>
+          <td>{esc(b['volume'])}</td>
+          <td class="ver">{esc(b['edition'])}</td>
+          <td class="num">{b['pages']}</td>
+          <td class="num">{esc(b['size'])}</td></tr>""")
+    body = f"""
+    <div class="h1">{esc(inv['title'])}</div>
+    <div class="h2">{esc(inv['subtitle'])}</div>
+    <table>
+      <thead><tr><th>#</th><th>学科</th><th>册次</th><th>版本 / 出版社</th>
+      <th>页数</th><th>大小</th></tr></thead>
+      <tbody>{''.join(rows)}</tbody>
+    </table>
+    <div class="foot">{esc(inv.get('footnote', ''))}</div>"""
+    css = f"""
+    .h1 {{ font-size:34px; font-weight:700; letter-spacing:-.5px; }}
+    .h2 {{ font-size:17px; color:{MUTED}; margin:10px 0 26px; }}
+    table {{ width:100%; border-collapse:collapse; font-size:17px; }}
+    th {{ text-align:left; font-weight:600; color:{MUTED}; font-size:14px;
+          letter-spacing:.06em; padding:0 10px 10px; border-bottom:2px solid {INK}; }}
+    td {{ padding:11px 10px; border-bottom:1px solid {LINE}; }}
+    tr:nth-child(even) td {{ background:#fafafa; }}
+    td.num {{ text-align:right; font-variant-numeric:tabular-nums; color:{MUTED}; }}
+    th:nth-child(5), th:nth-child(6) {{ text-align:right; }}
+    td.subj {{ font-weight:600; }}
+    td.ver {{ color:#374151; font-size:16px; }}
+    .foot {{ margin-top:22px; font-size:15px; color:{MUTED}; line-height:1.6;
+             padding-top:16px; border-top:1px solid {LINE}; }}
+    """
+    render(page(body, extra_css=css), out)
+
+
+# ---------- 02 知识单元 md ----------
+
+def fig_unit(md_path: Path, out: Path) -> None:
+    text = md_path.read_text(encoding="utf-8")
+    fm, _, body = text.partition("\n---\n")
+    fm = fm.replace("---", "", 1)
+    fm_lines = []
+    for line in fm.splitlines():
+        if ":" in line:
+            k, v = line.split(":", 1)
+            if k.strip() == "source_file":
+                v = f" books/{DEMO_PDF_NAME}"
+            fm_lines.append(f"<div><span class='k'>{esc(k)}:</span> {esc(v.strip())}</div>")
+    body_lines = []
+    for line in body.splitlines():
+        s = line.rstrip()
+        if not s:
+            continue
+        if s.startswith("<!-- p."):
+            body_lines.append(f"<div class='mark'>{esc(s)}"
+                              f"<span class='tip'>← 页码锚点：引用校验靠它定位</span></div>")
+        elif s.startswith("# "):
+            body_lines.append(f"<div class='h'>{esc(s[2:])}</div>")
+        else:
+            body_lines.append(f"<div class='t'>{esc(s)}</div>")
+    body = f"""
+    <div class="h1">知识单元（markdown）</div>
+    <div class="h2">每个单元一个文件：元信息 + 逐页正文，页码留在正文里</div>
+    <div class="fm">{''.join(fm_lines)}</div>
+    <div class="body">{''.join(body_lines)}</div>"""
+    css = f"""
+    .h1 {{ font-size:30px; font-weight:700; }}
+    .h2 {{ font-size:16px; color:{MUTED}; margin:8px 0 26px; }}
+    .fm {{ background:#0f172a; color:#cbd5e1; border-radius:12px; padding:18px 22px;
+           font-family:{MONO}; font-size:15px; line-height:1.85; }}
+    .fm .k {{ color:#7dd3fc; }}
+    .body {{ margin-top:22px; font-size:18px; line-height:2.0; }}
+    .h {{ font-size:23px; font-weight:700; margin:6px 0 14px; }}
+    .t {{ color:#262626; }}
+    .mark {{ font-family:{MONO}; font-size:15px; color:{ACCENT};
+             background:#eff6ff; border-left:4px solid {ACCENT};
+             padding:7px 12px; margin:16px 0 4px; border-radius:0 6px 6px 0; }}
+    .mark .tip {{ color:{MUTED}; font-family:{FONT}; font-size:14px; margin-left:12px; }}
+    """
+    render(page(body, extra_css=css), out)
+
+
+# ---------- 03 / 04 终端 ----------
+
+def term(blocks: list[tuple[str, str, str]]) -> str:
+    """blocks: [(提示符, 输出, 色调)]"""
+    out = []
+    for cmd, out_text, tone in blocks:
+        out.append(f"<div class='cmd'><span class='ps'>$</span> {esc(cmd)}</div>")
+        color = {"ok": "#a7f3d0", "bad": "#fecaca", "dim": "#94a3b8"}.get(tone, "#e2e8f0")
+        for line in out_text.splitlines():
+            cls = "out"
+            if line.startswith("✅"):
+                cls += " good"
+            elif line.startswith("❌") or line.startswith("     -"):
+                cls += " bad"
+            out.append(f"<div class='{cls}'>{esc(line) or '&nbsp;'}</div>")
+    return "<div class='term'>" + "".join(out) + "</div>"
+
+
+TERM_CSS = f"""
+.term {{ background:#0b1220; border-radius:12px; padding:22px 24px; font-family:{MONO};
+         font-size:15px; line-height:1.75; color:#e2e8f0; overflow:hidden; }}
+.cmd {{ color:#e2e8f0; margin-top:14px; }} .cmd:first-child {{ margin-top:0; }}
+.ps {{ color:{GREEN}; font-weight:700; }}
+.out {{ color:#94a3b8; white-space:pre-wrap; }}
+.out.good {{ color:#6ee7b7; }}
+.out.bad {{ color:#fca5a5; }}
+h1 {{ font-size:27px; font-weight:700; margin:0 0 6px; }}
+.sub {{ font-size:15px; color:{MUTED}; margin-bottom:20px; font-family:{FONT}; }}
+"""
+
+
+def fig_terminal(blocks, out: Path, title: str, sub: str, dark: bool = False) -> None:
+    body = f"<h1>{esc(title)}</h1><div class='sub'>{esc(sub)}</div>{term(blocks)}"
+    bg = "#ffffff"
+    extra = TERM_CSS
+    if dark:
+        bg = "#0b1220"
+        extra = TERM_CSS + f"h1, .sub {{ color:#e2e8f0; }} .sub {{ color:#94a3b8; }}"
+    render(page(body, bg=bg, extra_css=extra), out)
+
+
+# ---------- 05 结构图 ----------
+
+def fig_flow(out: Path) -> None:
+    body = """
+    <div class="h1">三个 skill，三道闸门</div>
+    <div class="h2">下载 → 拆成可引用的知识 → 只回答有出处的问答</div>
+    <div class="row">
+      <div class="card"><div class="n">1</div><div class="t">fetch-pdf</div>
+        <div class="d">国家中小学智慧教育平台<br>电子课本没有下载按钮</div>
+        <div class="k">元数据解析 · 1KB 探测 · 断点续传</div></div>
+      <div class="arrow">→</div>
+      <div class="card"><div class="n">2</div><div class="t">pdf-to-kb</div>
+        <div class="d">300 页读不动<br>抽出来没页码</div>
+        <div class="k">逐页抽取 · 页码锚点 · 图索引</div></div>
+      <div class="arrow">→</div>
+      <div class="card"><div class="n">3</div><div class="t">ask-kb</div>
+        <div class="d">答得像样<br>但查不到出处</div>
+        <div class="k">judge · 检索 · verify</div></div>
+    </div>
+    <div class="gates">
+      <div class="g"><span class="gt">闸门 ①</span><b>judge</b> 先判能不能答<br>
+        <span class="gd">可靠 / 存疑 / 无</span></div>
+      <div class="g"><span class="gt">闸门 ②</span><b>检索</b> 拿到单元 + 页码 + 逐字原文<br>
+        <span class="gd">不许凭记忆</span></div>
+      <div class="g"><span class="gt">闸门 ③</span><b>verify</b> 引文必须是原文子串<br>
+        <span class="gd">改一个字就 exit 1</span></div>
+    </div>
+    <div class="foot">判「可靠」但 verify 不过 → <b>以 verify 为准，拒答</b></div>"""
+    css = f"""
+    .h1 {{ font-size:32px; font-weight:700; }}
+    .h2 {{ font-size:16px; color:{MUTED}; margin:8px 0 30px; }}
+    .row {{ display:flex; align-items:stretch; gap:16px; }}
+    .card {{ flex:1; border:1.5px solid {LINE}; border-radius:14px; padding:20px 20px 18px; }}
+    .n {{ width:26px; height:26px; border-radius:50%; background:{INK}; color:#fff;
+          font-size:15px; font-weight:700; display:flex; align-items:center;
+          justify-content:center; margin-bottom:12px; }}
+    .t {{ font-family:{MONO}; font-size:21px; font-weight:700; }}
+    .d {{ font-size:15px; color:#374151; margin:10px 0 14px; line-height:1.6; }}
+    .k {{ font-size:14px; color:{ACCENT}; background:#eff6ff; padding:7px 10px;
+          border-radius:7px; line-height:1.5; }}
+    .arrow {{ display:flex; align-items:center; color:#9ca3af; font-size:30px; }}
+    .gates {{ display:flex; gap:16px; margin-top:30px; }}
+    .g {{ flex:1; background:#f8fafc; border-radius:12px; padding:16px 18px;
+          font-size:15px; line-height:1.8; color:#334155; }}
+    .gt {{ display:block; font-size:13px; letter-spacing:.1em; color:{MUTED}; }}
+    .gd {{ color:{MUTED}; font-size:14px; }}
+    .foot {{ margin-top:26px; padding-top:16px; border-top:1px solid {LINE};
+             font-size:16px; color:{MUTED}; }}
+    .foot b {{ color:{RED}; }}
+    """
+    render(page(body, extra_css=css), out)
+
+
+# ---------- 主流程：跑 demo，拿真实输出 ----------
+
+DEMO_PDF_NAME = "历史_九年级_节选.pdf"
+
+
+def scrub(text: str) -> str:
+    """把真实绝对路径洗成中性相对路径 —— 素材要发公众号，不能带出本机用户名。"""
+    import re
+    text = re.sub(r"\"[^\"]*?/books/[^\"]*\"", f'\"books/{DEMO_PDF_NAME}\"', text)
+    text = re.sub(r"[^\s\"']*?/books/[^\s\"',]+", f"books/{DEMO_PDF_NAME}", text)
+    text = re.sub(r"/Users/[^\s]+?/(books/[^\s]+)", r"\1", text)
+    text = re.sub(r"/Users/[^\s]+?/([^\s]*)", r"…/\1", text)
+    return text
+
+
+def build_demo(pdf: Path, work: Path) -> Path:
+    py = sys.executable
+    kb = work / "kb"
+    books = work / "books"
+    books.mkdir(parents=True, exist_ok=True)
+    demo_pdf = books / DEMO_PDF_NAME
+    shutil.copy(pdf, demo_pdf)          # 复制并改名：截图里只出现中性路径
+    pdf = demo_pdf
+    run = lambda c: subprocess.run(c, capture_output=True, text=True, cwd=REPO)
+    run([py, "skills/pdf-to-kb/scripts/extract.py", str(pdf), "--out", str(work), "--ocr", "none"])
+    pages = json.loads((work / "pages.json").read_text(encoding="utf-8"))
+    digits = [p["pdf_page"] for p in pages if p["chars"] > 40]
+    units = []
+    for p in digits:
+        first = (work / "_text" / f"p{p:04d}.txt").read_text(encoding="utf-8").strip().splitlines()
+        title = (first[0].strip() if first else f"第 {p} 页")[:24] or f"第 {p} 页"
+        import re as _re
+        safe = _re.sub(r"[^\w\u4e00-\u9fff]+", "", title) or f"p{p}"
+        units.append({"id": f"历史-{safe}", "title": title,
+                      "chapter": "第一周", "pdf_pages": [p]})
+    mf = work / "manifest.json"
+    mf.write_text(json.dumps({"book": {"id": "demo", "title": "历史 九年级（示例）",
+                                       "subject": "历史", "pdf": str(pdf)},
+                              "units": units}, ensure_ascii=False, indent=1),
+                  encoding="utf-8")
+    run([py, "skills/pdf-to-kb/scripts/segment.py", "--work", str(work),
+         "--manifest", str(mf), "--out", str(kb)])
+    run([py, "skills/pdf-to-kb/scripts/build.py", "--kb", str(kb)])
+    return kb
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--pdf", required=True, help="用于生成 02/03/04 的 PDF（需有文字层）")
+    ap.add_argument("--inventory", default=None, help="教材清单 JSON（生成 01）")
+    ap.add_argument("--out", default=str(HERE))
+    ap.add_argument("--only", default=None, help="只生成某一张，如 05")
+    args = ap.parse_args()
+
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    pdf = Path(args.pdf).resolve()
+    py = sys.executable
+
+    work = Path(tempfile.mkdtemp(prefix="mat-demo-"))
+    kb = build_demo(pdf, work)
+    K = [py, "skills/ask-kb/scripts/kb.py", "--kb", str(kb)]
+    def kb_cmd(*a):
+        raw = subprocess.run(K + list(a), capture_output=True, text=True, cwd=REPO).stdout
+        return scrub(raw.strip())
+
+    if not args.only or args.only == "01":
+        if args.inventory:
+            fig_inventory(json.loads(Path(args.inventory).read_text(encoding="utf-8")),
+                          out / "01-教材目录.png")
+        else:
+            print("  - 跳过 01（没给 --inventory）")
+
+    unit_id = None
+    ulist = json.loads((kb / "_index" / "units.json").read_text(encoding="utf-8"))["units"]
+    for u in ulist:
+        if u["chars"] > 300:
+            unit_id = u["id"]
+            break
+    unit_file = kb / "units" / f"{unit_id}.md"
+
+    if not args.only or args.only == "02":
+        fig_unit(unit_file, out / "02-知识单元.png")
+
+    q = "戊戌变法是什么性质的运动"
+    if not args.only or args.only == "03":
+        judge_out = scrub(kb_cmd("judge", q))
+        # search 用 --json 自己排版，避免把整段原文糊上去
+        try:
+            hits = json.loads(kb_cmd("search", "洋务运动 甲午中日战争", "--top", "2", "--json"))
+        except json.JSONDecodeError:
+            hits = []
+        s_lines = []
+        for h in hits:
+            snippet = " ".join(h["text"].split())[:58]
+            s_lines.append(f'[ {h["score"]:5.2f} ] {h["unit_id"]}  @p{h["page"]}  '
+                           f'{h["unit_title"]}')
+            s_lines.append(f"          {snippet}…")
+        # cite 用 JSON 抽关键字段
+        try:
+            c = json.loads(kb_cmd("cite", unit_id))
+            c_lines = [f'"source_file" : "{c["source_file"]}"',
+                       f'"source_pages": "{c["source_pages"]}"  (pdf {c["pdf_pages"]})',
+                       f'"abs_path"   : {"" if not c["abs_paths"] else c["abs_paths"][0]}']
+        except json.JSONDecodeError:
+            c_lines = [scrub(kb_cmd("cite", unit_id))]
+        fig_terminal([
+            (f'K judge "{q}"', judge_out, "ok"),
+            ('K search "洋务运动 甲午中日战争" --top 2', "\n".join(s_lines), "ok"),
+            (f"K cite {unit_id}", "\n".join(c_lines), "dim"),
+        ], out / "03-检索与引用.png",
+           "检索、判定、出处", "先判能不能答 → 取原文 → 拿文件名和页码（引用要用的三样东西）")
+
+    if not args.only or args.only == "04":
+        # 真正找到包含该知识点的页，再从原文里取一句（不能用别处的页去引）
+        try:
+            hits = json.loads(kb_cmd("search", q, "--top", "1", "--json"))
+            h = hits[0]
+        except (json.JSONDecodeError, IndexError):
+            print("  ✗ 04 需要检索命中，跳过", file=sys.stderr)
+            h = None
+        if h:
+            uid, pgno = h["unit_id"], h["page"]
+            md = (kb / "units" / f"{uid}.md").read_text(encoding="utf-8")
+            seg, keep = "", False
+            for line in md.splitlines():
+                m = __import__("re").match(r"<!--\s*p\.(\d+)", line.strip())
+                if m:
+                    keep = int(m.group(1)) == pgno
+                    continue
+                if keep:
+                    seg += line + "\n"
+            flat = "".join(seg.split())
+            quote = ""
+            for sent in __import__("re").split(r"(?<=[。！？；])", flat):
+                if "戊戌变法" in sent and len(sent) > 8:
+                    quote = sent.strip()
+                    break
+            quote = quote or flat[:40]
+            fake = quote.replace("思想解放", "推翻清朝") or (quote + "（错）")
+            if fake == quote:
+                fake = quote.replace("改良", "革命") or (quote + "（错）")
+            good = work / "draft_good.md"
+            good.write_text(f"# 戊戌变法的性质\n\n戊戌变法是一场思想解放运动。\n\n"
+                            f"[引] {uid} @p{pgno} :: {quote}\n", encoding="utf-8")
+            bad = work / "draft_bad.md"
+            bad.write_text(f"# 戊戌变法的性质\n\n戊戌变法推翻了清朝统治。\n\n"
+                           f"[引] {uid} @p{pgno} :: {fake}\n", encoding="utf-8")
+            pass_out = scrub(subprocess.run(K + ["verify", str(good), "--question", q],
+                                            capture_output=True, text=True, cwd=REPO).stdout.strip())
+            fail_out = scrub(subprocess.run(K + ["verify", str(bad), "--question", q],
+                                            capture_output=True, text=True, cwd=REPO).stdout.strip())
+            body = (f"<h1>引文闸门：真的放行，编的拦下</h1>"
+                    f"<div class='sub'>同一条命令、同一页，两份草稿 —— 差别只在引文是否真在原文里</div>"
+                    f"<div class='two'>"
+                    f"<div>{term([('K verify draft_good.md', pass_out, 'ok')])}</div>"
+                    f"<div>{term([('K verify draft_bad.md', fail_out, 'bad')])}</div></div>")
+            css = TERM_CSS + ".two { display:flex; gap:18px; align-items:flex-start; } .two > div { flex:1; }"
+            render(page(body, extra_css=css), out / "04-闸门对比.png")
+
+    if not args.only or args.only == "05":
+        fig_flow(out / "05-流程与闸门.png")
+
+    shutil.rmtree(work, ignore_errors=True)
+    print(f"\n✅ 素材已生成到 {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

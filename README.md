@@ -1,5 +1,7 @@
 # cn-k12-textbook-skills
 
+`https://github.com/yuna78/cn-k12-textbook-skills`
+
 > **给「国家中小学智慧教育平台」的教材，做一个本地学科知识库。**
 >
 > 平台电子课本没有下载按钮、要登录；一本 300 页读不动、抽出来没页码；问 AI 又查不到出处。
@@ -39,7 +41,7 @@
 # macOS: brew install poppler          Ubuntu: apt install poppler-utils
 # 扫描件另需 OCR：brew install tesseract tesseract-lang（或用 --ocr-cmd 接自己的）
 
-git clone <this-repo> cn-k12-textbook-skills && cd cn-k12-textbook-skills
+git clone https://github.com/yuna78/cn-k12-textbook-skills.git cn-k12-textbook-skills && cd cn-k12-textbook-skills
 
 # ① 下载（公开直链；需要登录的资源见 skills/fetch-pdf）
 python3 skills/fetch-pdf/scripts/fetch.py "https://example.com/book.pdf" -o books/book.pdf --resume
@@ -189,6 +191,10 @@ cp -r skills/* <your-project>/.agents/skills/   # 支持 .agents/skills 约定�
 
 MIT（见 [LICENSE](LICENSE)）。脚本可自由用于商业项目；**你的数据与下载内容不在授权范围内**。
 
-## 公众号/文章
+## 公众号 / 素材
 
-见 [docs/公众号稿.md](docs/公众号稿.md)（附发布前检查清单）。
+- 文章草稿：[docs/公众号稿.md](docs/公众号稿.md)（直给版，附发布前检查清单）
+- 配图素材包：[docs/material/](docs/material/) —— 五张图都是**跑真实流水线后截图**的，
+  改了代码重跑 `docs/material/make_material.py` 即可同步更新
+
+![引文闸门：真的放行，编的拦下](docs/material/04-闸门对比.png)
