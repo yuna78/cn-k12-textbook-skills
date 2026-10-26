@@ -234,3 +234,8 @@ MIT（见 [LICENSE](LICENSE)）。脚本可自由用于商业项目；**你的�
 | [`05-流程与闸门`](docs/material/05-流程与闸门.png) | 三个 skill + 三道闸门结构图 |
 | [`06-课本页对照md`](docs/material/06-课本页对照md.png) | 课本原页 vs 同页 md，附实测证据条 |
 | [`07-完整问答`](docs/material/07-完整问答.png) | 一次完整问答：judge → search → 带引用答案 → verify |
+
+## 关键词
+
+方便搜到：中国中小学教材 · 国家中小学智慧教育平台 · 电子课本 · 初中九年级 · 教材下载 ·
+PDF 转 Markdown · 学科知识库 · 带页码出处 · 引用校验 · 本地 RAG · OCR 扫描件 · Agent Skill。
