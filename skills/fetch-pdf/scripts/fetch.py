@@ -32,6 +32,15 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML,
 CHUNK = 1 << 20  # 1 MiB
 
 
+def ascii_url(url: str) -> str:
+    """URL 里的中文/空格必须百分号编码，否则 urllib 直接抛 ascii codec 错。"""
+    import urllib.parse as up
+    parts = up.urlsplit(url)
+    return up.urlunsplit((parts.scheme, parts.netloc,
+                          up.quote(parts.path, safe="/%"),
+                          up.quote(parts.query, safe="=&%"), ""))
+
+
 def human(n: float) -> str:
     for unit in ("B", "KB", "MB", "GB"):
         if n < 1024 or unit == "GB":
@@ -73,7 +82,7 @@ def download(url: str, out: Path, headers: dict[str, str], resume: bool,
             req_headers["Range"] = f"bytes={have}-"
 
         try:
-            req = urllib.request.Request(url, headers=req_headers)
+            req = urllib.request.Request(ascii_url(url), headers=req_headers)
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 status = resp.status
                 total = None

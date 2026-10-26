@@ -66,9 +66,20 @@ def find_metadata(cid: str, preferred: str | None):
     return None, None, None
 
 
+def ascii_url(url: str) -> str:
+    """把 URL 里的非 ASCII（如中文文件名）百分号编码 —— 否则 urllib 会报 ascii codec 错。"""
+    parts = urllib.parse.urlsplit(url)
+    return urllib.parse.urlunsplit((
+        parts.scheme, parts.netloc,
+        urllib.parse.quote(parts.path, safe="/%"),
+        urllib.parse.quote(parts.query, safe="=&%"),
+        "", ))
+
+
 def probe(url: str, timeout: int = 20) -> tuple[int, str]:
     """只取前 1KB，判断公开/需要登录。"""
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Range": "bytes=0-1023"})
+    req = urllib.request.Request(ascii_url(url),
+                                 headers={"User-Agent": UA, "Range": "bytes=0-1023"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, r.headers.get("Content-Type", "")
