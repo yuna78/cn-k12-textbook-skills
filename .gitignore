@@ -1,0 +1,19 @@
+# 下载的原文与生成物：绝不入库（版权 + 体积）
+books/
+work/
+kb/
+*.pdf
+*.png
+*.jpg
+*.jpeg
+!docs/**/*.png
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 本地草稿/密钥
+drafts/
+.env
+.DS_Store
