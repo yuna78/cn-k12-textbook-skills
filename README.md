@@ -5,6 +5,8 @@
 > 三个可组合的 skill：把教材 PDF 搬下来 → 变成能引用的知识 → 只回答有出处的问答。
 >
 > **PDF in, cited answers out.**
+>
+> 适用环境：**Claude Code / Codex / WorkBuddy** 等能跑 bash 的 agent；也可纯命令行使用。
 
 适用：人教版 / 沪教版 / 统编版 / 沪科技版，五·四学制与六·三学制均可；
 语数英理化史道法都行 —— 只要是 PDF 教材或老师发的资料，不绑定特定出版社与平台。
@@ -142,15 +144,28 @@ docs/            architecture.md（数据流与失败模式）、公众号稿.md
 
 ## 怎么装进你的 Agent
 
-这是 [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) 格式（`SKILL.md` +
-frontmatter + scripts）。放到 Agent 会扫描的目录即可：
+脚本是**纯 CLI**，任何能跑 bash 的 agent 都能用；`SKILL.md` 只是给 agent 看的说明书。
+三种接法按你的环境选：
+
+| 环境 | 接法 |
+|---|---|
+| **Claude Code** | 放进 `~/.claude/skills/`（用户级）或项目 `.claude/skills/`，自动识别 `SKILL.md` |
+| **Codex**（OpenAI Codex CLI） | 把 `SKILL.md` 里"命令怎么跑"那段写进仓库根的 `AGENTS.md`，或作为自定义指令加载；脚本照常 `python3` 调用 |
+| **WorkBuddy** | WorkBuddy 的技能就是 `<skill-name>/SKILL.md` 结构（[官方说明](https://workbuddy.homes/bluebook/)），与本仓库一致——把 `skills/` 下三个目录整个拷进它的技能目录即可 |
+| 其它 agent / 自己用 | 直接当命令行工具，三条命令串成流水线 |
 
 ```bash
-cp -r skills/* ~/.agents/skills/            # 用户级
-cp -r skills/* <your-project>/.agents/skills/   # 项目级
+git clone <repo> cn-k12-textbook-skills && cd cn-k12-textbook-skills
+
+cp -r skills/* ~/.claude/skills/            # Claude Code 用户级
+cp -r skills/* <your-project>/.claude/skills/   # Claude Code 项目级
+cp -r skills/* <your-project>/.agents/skills/   # 支持 .agents/skills 约定的 agent
 ```
 
-脚本是纯 CLI，不装 skill 也能直接当命令行工具用。
+> 三个 skill 都是 `<skill-name>/SKILL.md + scripts/` 的标准结构，Claude Code 与 WorkBuddy
+> 都按这个约定加载，无需改任何文件；Codex 只吃 `AGENTS.md`，把命令段落搬过去就行。
+>
+> 不装 skill 也能用：`SKILL.md` 里的命令原样复制到终端即可。
 
 ## 局限（先说清楚）
 
