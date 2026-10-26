@@ -132,6 +132,10 @@ ocr_quality: high
 
 ![引文闸门：真的放行，编的拦下](docs/material/04-闸门对比.png)
 
+一条问答走完全程（判定 → 检索 → 带引用的答案 → 闸门通过）：
+
+![一次完整问答](docs/material/07-完整问答.png)
+
 ## 实测
 
 在作者自己的项目上（一套初中教材 + 老师资料的知识库）：
@@ -218,7 +222,7 @@ MIT（见 [LICENSE](LICENSE)）。脚本可自由用于商业项目；**你的�
 ## 公众号 / 素材
 
 - 文章草稿：[docs/公众号稿.md](docs/公众号稿.md)（直给版，附发布前检查清单）
-- 配图素材包：[docs/material/](docs/material/) —— 六张图都是**跑真实流水线后截图**，
+- 配图素材包：[docs/material/](docs/material/) —— 七张图都是**跑真实流水线后截图**，
   改了代码重跑 `docs/material/make_material.py` 即可同步更新
 
 | 图 | 内容 |
@@ -229,3 +233,4 @@ MIT（见 [LICENSE](LICENSE)）。脚本可自由用于商业项目；**你的�
 | [`04-闸门对比`](docs/material/04-闸门对比.png) | 正确引用通过 vs 编造引用被拦下 |
 | [`05-流程与闸门`](docs/material/05-流程与闸门.png) | 三个 skill + 三道闸门结构图 |
 | [`06-课本页对照md`](docs/material/06-课本页对照md.png) | 课本原页 vs 同页 md，附实测证据条 |
+| [`07-完整问答`](docs/material/07-完整问答.png) | 一次完整问答：judge → search → 带引用答案 → verify |

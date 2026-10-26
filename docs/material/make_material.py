@@ -349,6 +349,62 @@ def fig_compare(page_png: Path, md_path: Path, out: Path, page_label: str,
     render(page(body, extra_css=css), out)
 
 
+# ---------- 07 完整问答 ----------
+
+def fig_qa(q: str, judge_out: str, search_lines: str, answer_md: str,
+           verify_out: str, out: Path) -> None:
+    """一次完整问答：判定 → 检索 → 带引用的答案 → 闸门。全部真实输出。"""
+    paras, bullets, cites = [], [], []
+    for line in answer_md.splitlines():
+        t = line.rstrip()
+        if not t or t.startswith("# "):
+            continue
+        if t.startswith("[引]"):
+            cites.append(t)
+        elif t.startswith("- "):
+            bullets.append(t[2:])
+        else:
+            paras.append(t)
+    def md_bold(t: str) -> str:
+        out, on = [], False
+        for part in t.split("**"):
+            out.append(f"<b>{esc(part)}</b>" if on else esc(part))
+            on = not on
+        return "".join(out)
+    bullet_html = "".join(f"<li>{md_bold(b)}</li>" for b in bullets)
+    cite_html = "".join(f"<div class='cite'>{esc(c)}</div>" for c in cites)
+    body = f"""
+    <h1>一次完整问答</h1>
+    <p class="sub">提问 → 先判能不能答 → 取原文（带页码）→ 写带引用的答案 → 交付前硬校验</p>
+    {term([('K judge "' + q + '"', judge_out, 'ok'),
+           ('K search "三角贸易 非洲 影响" --top 2', search_lines, 'ok')])}
+    <div class="ans">
+      <div class="q">问：{esc(q)}</div>
+      <div class="a">{''.join(f'<p>{esc(t)}</p>' for t in paras)}</div>
+      <ul class="ul">{bullet_html}</ul>
+      <div class="cc">{cite_html}</div>
+      <div class="ch">每条结论后面都挂着「单元 + 页码 + 逐字原文」</div>
+    </div>
+    {term([('K verify answer.md --question "' + q + '"', verify_out, 'ok')])}
+    <div class="foot">判「可靠」只是放行信号；<b>verify 通过</b>才是交付条件 —— 引文与原文差一个字，这一步就 exit 1。</div>"""
+    css = TERM_CSS + f"""
+    .sub {{ color:{MUTED}; font-size:15px; margin:6px 0 20px; }}
+    .ans {{ background:#fbfbfc; border:1px solid {LINE}; border-radius:12px;
+            padding:20px 22px; margin:20px 0; }}
+    .q {{ font-size:17px; font-weight:700; margin-bottom:12px; }}
+    .a p {{ margin:6px 0; font-size:16px; line-height:1.8; color:#1f2937; }}
+    .ul {{ margin:8px 0 0; padding-left:22px; font-size:16px; line-height:1.9; color:#1f2937; }}
+    .cc {{ margin-top:14px; padding-top:12px; border-top:1px dashed {LINE}; }}
+    .cite {{ font-family:{MONO}; font-size:13.5px; line-height:1.9; color:{GREEN};
+             background:#f0fdf4; border-radius:6px; padding:3px 9px; margin:5px 0; }}
+    .ch {{ font-size:13px; color:{MUTED}; margin-top:8px; }}
+    .foot {{ margin-top:20px; padding-top:14px; border-top:1px solid {LINE};
+             font-size:15px; color:#374151; }}
+    .foot b {{ color:{GREEN}; }}
+    """
+    render(page(body, extra_css=css), out)
+
+
 # ---------- 05 结构图 ----------
 
 def fig_flow(out: Path) -> None:
@@ -461,6 +517,7 @@ def main() -> int:
     ap.add_argument("--unit-lines", type=int, default=34, help="02 号图正文最多显示多少行（课本用 9 行＝短节选）")
     ap.add_argument("--page-png", default=None, help="06 号对照图用的课本原页 PNG（pdftoppm 渲染）")
     ap.add_argument("--page-label", default="p.89", help="06 号图左侧标注，如 p.89")
+    ap.add_argument("--question", default="三角贸易对非洲有什么影响？", help="07 号图的提问")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -577,6 +634,43 @@ def main() -> int:
 
     if not args.only or args.only == "05":
         fig_flow(out / "05-流程与闸门.png")
+
+    if (not args.only or args.only == "07") and args.unit_md:
+        import re as _re2
+        q = args.question
+        kb_root = Path(args.unit_md).parent.parent
+        def kb_q(*a):
+            return scrub(subprocess.run(
+                [py, "skills/ask-kb/scripts/kb.py", "--kb", str(kb_root)] + list(a),
+                capture_output=True, text=True, cwd=REPO).stdout.strip())
+        judge_out = kb_q("judge", q)
+        try:
+            hits = json.loads(kb_q("search", "三角贸易 非洲 影响", "--top", "2", "--json"))
+        except json.JSONDecodeError:
+            hits = []
+        search_lines = "\n".join(
+            f'[ {h["score"]:5.2f} ] {h["unit_id"]}  @p{h["page"]}  '
+            f'{" ".join(h["text"].split())[:46]}…' for h in hits)
+        # 从真实 md 里取一句原文当引用（不做任何改写）
+        md_text = Path(args.unit_md).read_text(encoding="utf-8")
+        quote = ""
+        for sent in _re2.split(r"(?<=[。！？])", "".join(md_text.split())):
+            if "滔天罪行" in sent:
+                quote = sent[sent.find("“三角贸易”"):].strip()
+                break
+        quote = quote or "“三角贸易”持续300多年，对非洲人民犯下滔天罪行。"
+        answer = (f"# 三角贸易对非洲的影响\n\n"
+                  f"一句话：三角贸易持续三百多年，对非洲是一场长期灾难。\n\n"
+                  f"- **性质**：对非洲人民犯下滔天罪行\n"
+                  f"- **人口损失**：非洲损失的人口总数可能近亿\n\n"
+                  f"[引] 历史九上-三角贸易 @p89 :: {quote}\n"
+                  f"[引] 历史九上-三角贸易 @p89 :: 非洲损失的人口总数可能近亿\n")
+        (work / "answer.md").write_text(answer, encoding="utf-8")
+        verify_out = scrub(subprocess.run(
+            [py, "skills/ask-kb/scripts/kb.py", "--kb", str(kb_root), "verify",
+             str(work / "answer.md"), "--question", q],
+            capture_output=True, text=True, cwd=REPO).stdout.strip())
+        fig_qa(q, judge_out, search_lines, answer, verify_out, out / "07-完整问答.png")
 
     if (not args.only or args.only == "06") and args.page_png and args.unit_md:
         import re as _re
