@@ -68,6 +68,8 @@ $K verify drafts/answer.md --question "水的净化有哪几种方法"
 | [`pdf-to-kb`](skills/pdf-to-kb/SKILL.md) | 几百页 PDF 不能检索、引用不到页 | 逐页抽取（文字层优先、扫描件 OCR）→ 按章切带 frontmatter 的 md → 抽图并对图号图题 → 建 chunk 索引 |
 | [`ask-kb`](skills/ask-kb/SKILL.md) | 答得像但会编、找不到出处 | 零依赖 BM25（中文二元组）→ `judge` 判能不能答 → `verify` 硬校验每条引文是否真在原文 |
 
+![三个 skill，三道闸门](docs/material/05-流程与闸门.png)
+
 ### fetch-pdf：三条路，先探测再动手
 
 ```
@@ -79,6 +81,10 @@ $K verify drafts/answer.md --question "水的净化有哪几种方法"
 已适配：国家中小学智慧教育平台（教材，元数据在公开镜像、文件在私有 CDN）。
 其它站点只需替换两个函数（`readToken()` / `authHeader()`），见
 [references/sources.md](skills/fetch-pdf/references/sources.md)。
+
+真下下来的一批（11 册 / 1509 页 / 约 1.0 GB，每本都过了页数与字节数校验）：
+
+![真实下载的教材目录](docs/material/01-教材目录.png)
 
 ### pdf-to-kb：页码是第一优先级
 
@@ -100,6 +106,14 @@ ocr_quality: high
 `<!-- p.N -->` 不是装饰 —— `verify` 靠它把「页」落成具体一段文字。
 没有页码的知识库，等于没有出处。
 
+课本是页图、没有文字层时，先 OCR 再按页装配。左边是原页，右边是同页出来的 md：
+
+![课本原页 ↔ 知识单元 md](docs/material/06-课本页对照md.png)
+
+同一份 md 放大看：frontmatter + 页码锚点 + 正文，锚点和内容按页对齐：
+
+![课本 OCR 出来的知识单元 md](docs/material/02-课本知识单元.png)
+
 ### ask-kb：三道闸门，宁可拒答
 
 | judge | 允许怎么答 |
@@ -109,6 +123,14 @@ ocr_quality: high
 | 无 | 只能说"本地资料没有"；给常识必须标 `⚠️ 非本地资料` |
 
 引文必须**逐字**是原文子串（去空白标点后比对）；**判可靠但 verify 不过 → 以 verify 为准拒答**。
+
+三个命令各拿什么（真实输出）：
+
+![检索、判定、出处](docs/material/03-检索与引用.png)
+
+同一条 `verify`、同一页，两份草稿 —— 差别只在引文是否真在原文里：
+
+![引文闸门：真的放行，编的拦下](docs/material/04-闸门对比.png)
 
 ## 实测
 
@@ -196,11 +218,14 @@ MIT（见 [LICENSE](LICENSE)）。脚本可自由用于商业项目；**你的�
 ## 公众号 / 素材
 
 - 文章草稿：[docs/公众号稿.md](docs/公众号稿.md)（直给版，附发布前检查清单）
-- 配图素材包：[docs/material/](docs/material/) —— 五张图都是**跑真实流水线后截图**的，
+- 配图素材包：[docs/material/](docs/material/) —— 六张图都是**跑真实流水线后截图**，
   改了代码重跑 `docs/material/make_material.py` 即可同步更新
 
-![课本原页 vs 出来的 md](docs/material/06-课本页对照md.png)
-
-![课本 OCR 出来的知识单元 md](docs/material/02-课本知识单元.png)
-
-![引文闸门：真的放行，编的拦下](docs/material/04-闸门对比.png)
+| 图 | 内容 |
+|---|---|
+| [`01-教材目录`](docs/material/01-教材目录.png) | 真下载的 11 册清单（页数/大小/版本） |
+| [`02-课本知识单元`](docs/material/02-课本知识单元.png) | 课本 OCR 出来的单元 md（frontmatter + 页码锚点） |
+| [`03-检索与引用`](docs/material/03-检索与引用.png) | `judge` / `search` / `cite` 真实输出 |
+| [`04-闸门对比`](docs/material/04-闸门对比.png) | 正确引用通过 vs 编造引用被拦下 |
+| [`05-流程与闸门`](docs/material/05-流程与闸门.png) | 三个 skill + 三道闸门结构图 |
+| [`06-课本页对照md`](docs/material/06-课本页对照md.png) | 课本原页 vs 同页 md，附实测证据条 |
