@@ -169,11 +169,16 @@ python3 skills/ask-kb/scripts/eval.py --kb kb/ --set examples/eval.example.json 
 
 ```
 skills/
-  fetch-pdf/     SKILL.md + fetch.py + resolve_smartedu.py + fetch_in_page.js
-  pdf-to-kb/     SKILL.md + extract.py + segment.py + figures.py + build.py
-  ask-kb/        SKILL.md + kb.py + eval.py
-examples/        manifest / eval / draft 三个样例
-docs/            architecture.md（数据流与失败模式）、material/（README 配图）
+  fetch-pdf/     SKILL.md + scripts/(fetch.py, resolve_smartedu.py, fetch_in_page.js)
+                 + references/sources.md      ← 平台解析的备选路径与失效对照
+  pdf-to-kb/     SKILL.md + scripts/(extract.py, segment.py, figures.py, build.py)
+                 + references/schema.md       ← 单元 md 的 frontmatter 与页码规则
+  ask-kb/        SKILL.md + scripts/(kb.py, eval.py)
+                 + references/gates.md        ← 三道闸门的判定细节
+examples/        README.md（怎么跑）+ manifest/eval/draft 三个样例 + vision_ocr.swift
+docs/            architecture.md（数据流与失败模式）+ material/（README 配图，见其 README）
+LICENSE           MIT
+.gitignore       排除 books/ work/ kb/ *.pdf —— 教材与中间产物不进仓库
 ```
 
 ## 怎么装进你的 Agent
@@ -189,7 +194,7 @@ docs/            architecture.md（数据流与失败模式）、material/（REA
 | 其它 agent / 自己用 | 直接当命令行工具，三条命令串成流水线 |
 
 ```bash
-git clone <repo> cn-k12-textbook-skills && cd cn-k12-textbook-skills
+git clone https://github.com/yuna78/cn-k12-textbook-skills.git && cd cn-k12-textbook-skills
 
 cp -r skills/* ~/.claude/skills/            # Claude Code 用户级
 cp -r skills/* <your-project>/.claude/skills/   # Claude Code 项目级

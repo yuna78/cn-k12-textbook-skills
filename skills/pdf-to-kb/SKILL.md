@@ -146,3 +146,8 @@ updated: 2026-10-26
 - 只有几页、一次就能读完的资料：直接 `pdftotext` 读，不必建库
 - 纯图片扫描件又没有可靠 OCR：宁可先人工核对，别把 `low` 质量的 OCR 当知识库
 - 需要精确版面还原（表格、公式排版）：本 skill 只抽文本，不保留版式
+
+## 参考资料
+
+- [references/schema.md](references/schema.md) —— 知识单元的 frontmatter 全字段、页码两条线
+  （`pdf_pages` 物理页 / `source_pages` 印刷页）、`ocr_quality` 三档语义、切分粒度建议。
