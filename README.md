@@ -38,10 +38,13 @@
 
 ## 快速开始
 
+每一步的输入输出、三个样例文件的字段含义，都在 [`examples/README.md`](examples/README.md)（照抄能跑通）。
+
 ```bash
 # 依赖：python3 + poppler（pdftotext/pdftoppm/pdfimages/pdfinfo）
 # macOS: brew install poppler          Ubuntu: apt install poppler-utils
-# 扫描件另需 OCR：brew install tesseract tesseract-lang（或用 --ocr-cmd 接自己的）
+# 扫描件另需 OCR：macOS 用系统 Vision（本仓库带 50 行包装，见「跨平台」）；
+#                 Windows / Linux 用 tesseract（或用 --ocr-cmd 接自己的引擎）
 
 git clone https://github.com/yuna78/cn-k12-textbook-skills.git cn-k12-textbook-skills && cd cn-k12-textbook-skills
 
