@@ -221,6 +221,8 @@ MIT（见 [LICENSE](LICENSE)）。脚本可自由用于商业项目；**你的�
 
 ## 公众号 / 素材
 
+- **交付说明（先读这个）**：[docs/material/HANDOVER.md](docs/material/HANDOVER.md) —— 素材清单、
+  文章骨架、可直接粘的 CTA、发布硬规则（给接手写文章的人/AI）
 - 文章草稿：[docs/公众号稿.md](docs/公众号稿.md)（直给版，附发布前检查清单）
 - 配图素材包：[docs/material/](docs/material/) —— 七张图都是**跑真实流水线后截图**，
   改了代码重跑 `docs/material/make_material.py` 即可同步更新
