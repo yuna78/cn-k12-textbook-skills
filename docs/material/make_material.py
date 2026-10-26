@@ -140,7 +140,8 @@ def fig_inventory(inv: dict, out: Path) -> None:
 
 # ---------- 02 知识单元 md ----------
 
-def fig_unit(md_path: Path, out: Path) -> None:
+def fig_unit(md_path: Path, out: Path, caption: str | None = None,
+             max_lines: int = 34, deep: bool = False, redact: bool = False) -> None:
     text = md_path.read_text(encoding="utf-8")
     fm, _, body = text.partition("\n---\n")
     fm = fm.replace("---", "", 1)
@@ -149,23 +150,32 @@ def fig_unit(md_path: Path, out: Path) -> None:
         if ":" in line:
             k, v = line.split(":", 1)
             if k.strip() == "source_file":
-                v = f" books/{DEMO_PDF_NAME}"
+                v = f" books/{Path(v.strip()).name}"
             fm_lines.append(f"<div><span class='k'>{esc(k)}:</span> {esc(v.strip())}</div>")
-    body_lines = []
-    for line in body.splitlines():
-        s = line.rstrip()
+    body_lines, n_text = [], 0
+    lines = [ln.rstrip() for ln in body.splitlines()]
+    for line in lines:
+        s = line
         if not s:
             continue
+        if not s.startswith("<!-- p.") and not s.startswith("#"):
+            n_text += 1
+            if n_text > max_lines:
+                body_lines.append("<div class='more'>…（余下正文省略）</div>")
+                break
         if s.startswith("<!-- p."):
             body_lines.append(f"<div class='mark'>{esc(s)}"
                               f"<span class='tip'>← 页码锚点：引用校验靠它定位</span></div>")
         elif s.startswith("# "):
             body_lines.append(f"<div class='h'>{esc(s[2:])}</div>")
+        elif redact:
+            w = max(24, min(96, len(s) * 1.6))
+            body_lines.append(f"<div class='bar' style='width:{w}%'></div>")
         else:
             body_lines.append(f"<div class='t'>{esc(s)}</div>")
     body = f"""
-    <div class="h1">知识单元（markdown）</div>
-    <div class="h2">每个单元一个文件：元信息 + 逐页正文，页码留在正文里</div>
+    <div class="h1">{'课本 → 知识单元 md' if deep else '知识单元（markdown）'}</div>
+    <div class="h2">{esc(caption) if caption else '每个单元一个文件：元信息 + 逐页正文，页码留在正文里'}</div>
     <div class="fm">{''.join(fm_lines)}</div>
     <div class="body">{''.join(body_lines)}</div>"""
     css = f"""
@@ -181,6 +191,8 @@ def fig_unit(md_path: Path, out: Path) -> None:
              background:#eff6ff; border-left:4px solid {ACCENT};
              padding:7px 12px; margin:16px 0 4px; border-radius:0 6px 6px 0; }}
     .mark .tip {{ color:{MUTED}; font-family:{FONT}; font-size:14px; margin-left:12px; }}
+    .more {{ color:{MUTED}; font-size:15px; margin-top:10px; }}
+    .bar {{ height:15px; border-radius:4px; background:#e8eaed; margin:11px 0; }}
     """
     render(page(body, extra_css=css), out)
 
@@ -331,6 +343,11 @@ def main() -> int:
     ap.add_argument("--inventory", default=None, help="教材清单 JSON（生成 01）")
     ap.add_argument("--out", default=str(HERE))
     ap.add_argument("--only", default=None, help="只生成某一张，如 05")
+    ap.add_argument("--unit-md", default=None,
+                    help="直接用这个知识单元 md 生成 02 号图（课本流水线的产物）")
+    ap.add_argument("--unit-caption", default=None, help="02 号图副标题")
+    ap.add_argument("--redact", action="store_true", help="02 号图把课本正文换成灰条（公开发用）")
+    ap.add_argument("--unit-lines", type=int, default=34, help="02 号图正文最多显示多少行（课本用 9 行＝短节选）")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -361,7 +378,13 @@ def main() -> int:
     unit_file = kb / "units" / f"{unit_id}.md"
 
     if not args.only or args.only == "02":
-        fig_unit(unit_file, out / "02-知识单元.png")
+        if args.unit_md:
+            name = "02-课本知识单元-脱敏版.png" if args.redact else "02-课本知识单元.png"
+            fig_unit(Path(args.unit_md), out / name,
+                     caption=args.unit_caption, deep=True, redact=args.redact,
+                     max_lines=args.unit_lines)
+        else:
+            fig_unit(unit_file, out / "02-知识单元.png")
 
     q = "戊戌变法是什么性质的运动"
     if not args.only or args.only == "03":

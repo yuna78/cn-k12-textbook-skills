@@ -175,6 +175,8 @@ cp -r skills/* <your-project>/.agents/skills/   # 支持 .agents/skills 约定�
 
 ## 局限（先说清楚）
 
+- **OCR 已实测（macOS Vision）**：用 `--ocr-cmd` 接 Apple Vision（`tools/bin/ocr`，本项目自建），
+  课本 2 页实测约 **2.5 s/页**（不含渲染）、文本质量好；**tesseract 路径仍未实测**（本机未装）
 - **OCR 质量决定上限**：`ocr_quality: low` 的单元，引用时必须提示"OCR 可能有误，请对纸质书"
 - **不保留版式**：表格/公式只抽文本，复杂版面会退化
 - **平台接口是逆向的**：smartedu 的私有 CDN 签名方案随时可能变；只应下载你有权访问的内容
@@ -196,5 +198,7 @@ MIT（见 [LICENSE](LICENSE)）。脚本可自由用于商业项目；**你的�
 - 文章草稿：[docs/公众号稿.md](docs/公众号稿.md)（直给版，附发布前检查清单）
 - 配图素材包：[docs/material/](docs/material/) —— 五张图都是**跑真实流水线后截图**的，
   改了代码重跑 `docs/material/make_material.py` 即可同步更新
+
+![课本 OCR 出来的知识单元 md](docs/material/02-课本知识单元.png)
 
 ![引文闸门：真的放行，编的拦下](docs/material/04-闸门对比.png)
