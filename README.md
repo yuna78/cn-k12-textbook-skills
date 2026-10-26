@@ -208,7 +208,7 @@ cp -r skills/* <your-project>/.agents/skills/   # 支持 .agents/skills 约定�
 | 依赖 | macOS | Windows | Linux |
 |---|---|---|---|
 | poppler（`pdftotext` / `pdftoppm` / `pdfinfo`） | `brew install poppler` | 下 [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases) 发行包，把 `bin\` 加进 `PATH` | `apt install poppler-utils` |
-| tesseract + 中文包 | `brew install tesseract tesseract-lang` | [UB-Mannheim 安装包](https://github.com/UB-Mannheim/tesseract/wiki)，安装时勾选 **Chinese (Simplified)** | `apt install tesseract-ocr tesseract-ocr-chi-sim` |
+| OCR 引擎 | **不用装**，系统自带 Vision（见下） | tesseract：[UB-Mannheim 安装包](https://github.com/UB-Mannheim/tesseract/wiki)，勾选 **Chinese (Simplified)** | `apt install tesseract-ocr tesseract-ocr-chi-sim` |
 
 ```powershell
 # Windows（PowerShell）—— 先确认依赖在 PATH 里
@@ -235,6 +235,40 @@ Windows 上几个容易踩的点：
   `--ocr-cmd "python C:\tools\vision_ocr.py {img} {out}"`（脚本只要求「读图 → 写 <out>.txt」）
 - `kb.py` / `segment.py` / `build.py` / `figures.py` 无平台依赖，Windows 原样能跑
 
+### macOS：用系统自带的 Vision 做 OCR（推荐，不用装任何东西）
+
+**Vision 是什么**：苹果系统里的图像分析框架（`Vision.framework`），其中 `VNRecognizeTextRequest`
+就是文字识别。它是 **macOS 自带的能力，不是第三方软件**——不用装、不联网、不花钱，
+macOS 10.15+ 都有。识别在你的机器上本地完成，图片不会离开本机。
+
+**为什么拿它做教材**：印刷体中文识别质量明显好于 tesseract，速度还快一倍；
+按 250 dpi 渲染页图后，小字（页脚、图注、图里的标注）也能抓到。
+
+**它的问题**：Vision 只有框架，**没有命令行工具**。所以本仓库带了一个 50 行的 Swift 包装：
+[`examples/vision_ocr.swift`](examples/vision_ocr.swift)（用 `swiftc` 编译一次即可）。
+
+```bash
+# 编译（约 3.6 秒，产物 87 KB；需要 Xcode 命令行工具：xcode-select --install）
+swiftc -O -o bin/vision_ocr examples/vision_ocr.swift
+
+# 单张试一下
+bin/vision_ocr page.png
+
+# 接到流水线里（这是个普通 CLI，按 --ocr-cmd 的 {img}/{out} 约定用）
+python3 skills/pdf-to-kb/scripts/extract.py books/历史.pdf --out work/历史 \
+        --ocr auto --ocr-cmd "$(pwd)/bin/vision_ocr {img} > {out}"
+```
+
+那个 Swift 文件里做了三件关键的事（自己写适配器时照抄）：
+
+1. `recognitionLevel = .accurate` + `recognitionLanguages = ["zh-Hans", "en-US"]`
+2. `usesLanguageCorrection = true`、`minimumTextHeight = 0.005`（小字不丢）
+3. **把 Vision 返回的「文本块」按 y 坐标聚类成行再排序** —— 不做这一步，中文正文会被打碎成乱序碎片，
+   这是直接调 Vision 最容易踩的坑
+
+**局限**：只出纯文本，不保留表格/分栏结构；公式与上下标会退化；**Windows / Linux 用不了**（没有 Vision），
+那两个平台用 tesseract，或自己接 RapidOCR / PaddleOCR（同样只要满足「读图 → 写 `<out>.txt`」）。
+
 ### OCR 两个引擎的实测对比（同一份 2 页课本，人教版历史九上 p.89–90）
 
 | 引擎 | 汉字数 | 噪音行 | 耗时（含 250 dpi 渲染） | 典型错字 |
@@ -256,7 +290,8 @@ curl -sL "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/chi
 
 ## 局限（先说清楚）
 
-- **OCR 引擎可换，不是绑死的**：`--ocr-cmd` 接任意引擎。macOS 用系统 Vision（本项目实测
+- **OCR 引擎可换，不是绑死的**：`--ocr-cmd` 接任意引擎。macOS 用**系统自带 Vision**
+  （不用装软件，仓库带 50 行 Swift 包装 `examples/vision_ocr.swift`，`swiftc` 编译即用；实测
   11 册 / 1509 页 / 843,595 字 / 0 失败，含渲染约 **2.5 s/页**）；Windows / Linux 用 tesseract
   （实测约 5.4 s/页、汉字相似度 90.2%，见[「跨平台」](#跨平台windows--linux)的对比表）
 - **OCR 质量决定上限**：`ocr_quality: low` 的单元，引用时必须提示"OCR 可能有误，请对纸质书"
