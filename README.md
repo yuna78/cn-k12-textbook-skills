@@ -171,7 +171,7 @@ skills/
   pdf-to-kb/     SKILL.md + extract.py + segment.py + figures.py + build.py
   ask-kb/        SKILL.md + kb.py + eval.py
 examples/        manifest / eval / draft 三个样例
-docs/            architecture.md（数据流与失败模式）、公众号稿.md
+docs/            architecture.md（数据流与失败模式）、material/（README 配图）
 ```
 
 ## 怎么装进你的 Agent
@@ -219,12 +219,10 @@ cp -r skills/* <your-project>/.agents/skills/   # 支持 .agents/skills 约定�
 
 MIT（见 [LICENSE](LICENSE)）。脚本可自由用于商业项目；**你的数据与下载内容不在授权范围内**。
 
-## 公众号 / 素材
+## 文档与配图
 
-- **交付说明（先读这个）**：[docs/material/HANDOVER.md](docs/material/HANDOVER.md) —— 素材清单、
-  文章骨架、可直接粘的 CTA、发布硬规则（给接手写文章的人/AI）
-- 文章草稿：[docs/公众号稿.md](docs/公众号稿.md)（直给版，附发布前检查清单）
-- 配图素材包：[docs/material/](docs/material/) —— 七张图都是**跑真实流水线后截图**，
+- 架构与数据流：[docs/architecture.md](docs/architecture.md)
+- README 里的配图：[docs/material/](docs/material/) —— 都是跑真实流水线后截图，
   改了代码重跑 `docs/material/make_material.py` 即可同步更新
 
 | 图 | 内容 |

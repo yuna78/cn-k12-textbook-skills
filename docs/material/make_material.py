@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""make_material.py — 生成公众号/README 用的配图（可复现）。
+"""make_material.py — 生成 README 用的配图（可复现）。
 
 做五张图，全部来自**真实跑出来的结果**，不是画的示意图：
 
@@ -464,7 +464,7 @@ DEMO_PDF_NAME = "历史_九年级_节选.pdf"
 
 
 def scrub(text: str) -> str:
-    """把真实绝对路径洗成中性相对路径 —— 素材要发公众号，不能带出本机用户名。"""
+    """把真实绝对路径洗成中性相对路径 —— 图要进公开仓库，不能带出本机用户名。"""
     import re
     text = re.sub(r"\"[^\"]*?/books/[^\"]*\"", f'\"books/{DEMO_PDF_NAME}\"', text)
     text = re.sub(r"[^\s\"']*?/books/[^\s\"',]+", f"books/{DEMO_PDF_NAME}", text)
