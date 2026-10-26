@@ -16,7 +16,9 @@ OCR 三种模式（--ocr）：
     tesseract   强制走 tesseract（需 `brew install tesseract tesseract-lang`）
     none        不 OCR（纯文字层 PDF 用这个，快）
     --ocr-cmd   自定义命令模板，占位符 {img} {out}，例如：
+                --ocr-cmd "tesseract {img} {out} -l chi_sim"
                 --ocr-cmd "myocr --lang chs {img} {out}"
+                模板里没有 shell 元字符时直接调用二进制（Windows/macOS/Linux 一致）
 
 用法：
     python3 extract.py book.pdf --out work/ --ocr auto
@@ -26,6 +28,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -38,6 +42,24 @@ OCR_DPI = 250
 
 def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, **kw)
+
+
+SHELL_CHARS = set("|&;<>()$`*?[]~\n")
+
+
+def run_shell(cmd: str) -> subprocess.CompletedProcess:
+    """执行 --ocr-cmd 模板。
+
+    ① 模板里没有 shell 元字符时 **直接调用二进制**（shlex 拆参数）——
+       `tesseract {img} {out} -l chi_sim` 这类命令在 macOS / Linux / Windows 行为完全一致；
+    ② 需要重定向或管道（如 `myocr {img} > {out}`）时才走 shell：
+       macOS/Linux 用 bash -lc，Windows 用 cmd /c。
+    """
+    if not (SHELL_CHARS & set(cmd)):
+        return run(shlex.split(cmd))
+    if os.name == "nt":
+        return run(["cmd", "/c", cmd])
+    return run(["bash", "-lc", cmd])
 
 
 def pdf_pages(pdf: Path) -> int:
@@ -58,7 +80,7 @@ def ocr_available(mode: str) -> tuple[bool, str]:
         return False, "none"
     if shutil.which("tesseract"):
         return True, "tesseract"
-    return False, "未安装 tesseract（brew install tesseract tesseract-lang）"
+    return False, "未安装 tesseract（macOS: brew install tesseract；Windows: 装 UB-Mannheim 版并加 PATH）"
 
 
 def ocr_page(pdf: Path, p: int, cmd_tpl: str | None, lang: str) -> str:
@@ -75,7 +97,7 @@ def ocr_page(pdf: Path, p: int, cmd_tpl: str | None, lang: str) -> str:
         out = Path(td) / "out"
         if cmd_tpl:
             cmd = cmd_tpl.format(img=str(img), out=str(out))
-            run(["bash", "-lc", cmd])
+            run_shell(cmd)
             txt = out.with_suffix(".txt")
             if txt.exists():
                 return txt.read_text(encoding="utf-8", errors="replace").strip()

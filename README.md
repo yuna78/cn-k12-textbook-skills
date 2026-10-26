@@ -201,10 +201,45 @@ cp -r skills/* <your-project>/.agents/skills/   # 支持 .agents/skills 约定�
 >
 > 不装 skill 也能用：`SKILL.md` 里的命令原样复制到终端即可。
 
+## 跨平台（Windows / Linux）
+
+脚本是纯 Python（无第三方包），平台差异只在两个**外部命令行工具**和 **OCR 引擎**：
+
+| 依赖 | macOS | Windows | Linux |
+|---|---|---|---|
+| poppler（`pdftotext` / `pdftoppm` / `pdfinfo`） | `brew install poppler` | 下 [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases) 发行包，把 `bin\` 加进 `PATH` | `apt install poppler-utils` |
+| tesseract + 中文包 | `brew install tesseract tesseract-lang` | [UB-Mannheim 安装包](https://github.com/UB-Mannheim/tesseract/wiki)，安装时勾选 **Chinese (Simplified)** | `apt install tesseract-ocr tesseract-ocr-chi-sim` |
+
+```powershell
+# Windows（PowerShell）—— 先确认依赖在 PATH 里
+pdftotext -v
+tesseract --version
+
+# ① 有文字层的 PDF：直接抽
+python skills\pdf-to-kb\scripts\extract.py books\历史.pdf --out work\历史 --ocr none
+
+# ② 扫描件（无文字层）：走 tesseract
+python skills\pdf-to-kb\scripts\extract.py books\历史.pdf --out work\历史 `
+       --ocr auto --ocr-lang chi_sim+eng
+```
+
+三个平台行为一致的原因：`--ocr-cmd` 模板里**没有 shell 元字符时，脚本直接调用二进制**
+（不经过 shell 解析），所以 `tesseract {img} {out} -l chi_sim` 在 cmd / PowerShell / bash 下等价。
+真要写重定向（`myocr {img} > {out}`）时，脚本会自动切换到平台 shell（`cmd /c` 或 `bash -lc`）。
+
+Windows 上几个容易踩的点：
+
+- **别在 `--ocr-cmd` 里写重定向**，直接给命令即可（见上）
+- 中文路径 / 中文输出：先 `chcp 65001`，或设环境变量 `PYTHONUTF8=1`
+- Apple Vision 是 macOS 专有。想要同样质量，Windows 可以接自己写的适配器：
+  `--ocr-cmd "python C:\tools\vision_ocr.py {img} {out}"`（脚本只要求「读图 → 写 <out>.txt」）
+- `kb.py` / `segment.py` / `build.py` / `figures.py` 无平台依赖，Windows 原样能跑
+
 ## 局限（先说清楚）
 
-- **OCR 已实测（macOS Vision）**：用 `--ocr-cmd` 接 Apple Vision（`tools/bin/ocr`，本项目自建），
-  课本 2 页实测约 **2.5 s/页**（不含渲染）、文本质量好；**tesseract 路径仍未实测**（本机未装）
+- **OCR 引擎可换，不是绑死的**：`--ocr-cmd` 接任意引擎。macOS 用系统 Vision（本项目实测
+  11 册 / 1509 页 / 843,595 字 / 0 失败，含渲染约 **2.5 s/页**）；Windows 与 Linux 用 tesseract，
+  见下方[「跨平台」](#跨平台windows--linux)
 - **OCR 质量决定上限**：`ocr_quality: low` 的单元，引用时必须提示"OCR 可能有误，请对纸质书"
 - **不保留版式**：表格/公式只抽文本，复杂版面会退化
 - **平台接口是逆向的**：smartedu 的私有 CDN 签名方案随时可能变；只应下载你有权访问的内容

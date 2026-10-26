@@ -62,9 +62,13 @@ python3 ../ask-kb/scripts/kb.py --kb kb/ search "光合作用的场所"
 
 ```bash
 --ocr auto              # 有文字层用文字层，空页 OCR（默认）
---ocr-cmd "myocr {img} {out}"   # 用你自己的 OCR：占位符 {img} {out}
---ocr tesseract --ocr-lang chi_sim+eng
+--ocr tesseract --ocr-lang chi_sim+eng          # 用 tesseract（Win/Linux 常见）
+--ocr-cmd "tesseract {img} {out} -l chi_sim"    # 同上，显式给命令
+--ocr-cmd "myocr {img} {out}"                   # 任何写 <out>.txt 的引擎
 ```
+
+`--ocr-cmd` 模板里**没有 shell 元字符时直接调用二进制**，所以同一条命令在
+macOS / Windows(cmd, PowerShell) / Linux 下行为一致；有重定向时才切到平台 shell。
 
 单元 frontmatter 里的 `ocr_quality` 是三档：`high`（纯文字层）/ `medium`（半数以下 OCR）/
 `low`（大半靠 OCR）。**`low` 的单元回答时要标 ⚠️ 待核对**——OCR 会认错字，
