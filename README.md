@@ -1,5 +1,7 @@
 # cn-k12-textbook-skills
 
+## 中国中小学教材 · AI 技能系列
+
 `https://github.com/yuna78/cn-k12-textbook-skills`
 
 > **给「国家中小学智慧教育平台」的教材，做一个本地学科知识库。**
