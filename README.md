@@ -235,11 +235,30 @@ Windows 上几个容易踩的点：
   `--ocr-cmd "python C:\tools\vision_ocr.py {img} {out}"`（脚本只要求「读图 → 写 <out>.txt」）
 - `kb.py` / `segment.py` / `build.py` / `figures.py` 无平台依赖，Windows 原样能跑
 
+### OCR 两个引擎的实测对比（同一份 2 页课本，人教版历史九上 p.89–90）
+
+| 引擎 | 汉字数 | 噪音行 | 耗时（含 250 dpi 渲染） | 典型错字 |
+|---|---|---|---|---|
+| macOS Vision（系统内置） | 748 | 0 | **5.3 s / 2 页**（≈2.6 s/页） | 无 |
+| tesseract 5.5.3 + `chi_sim`(fast) | 674 | 9 | **10.7 s / 2 页**（≈5.4 s/页） | 「忍饥挨饿」→「忍饥换俄」 |
+
+- 汉字级相似度 **90.2%**（以 Vision 为基准）；关键短语「三角贸易 / 滔天罪行 / 非洲 / 人口总数」两边都命中，
+  tesseract 漏了「运奴船」，且在页眉水印处产生了 9 行英文乱码
+- 结论：**Mac 上用 Vision**（快一倍、干净）；**Windows 上用 tesseract 完全可用**，但要多留一道人工核对
+- tesseract 默认只带 `eng`，中文包单独装：
+
+```bash
+# macOS：中文包单独拉（约 2.4 MB）
+curl -sL "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/chi_sim.traineddata" \
+     -o "$(brew --prefix tesseract)/share/tessdata/chi_sim.traineddata"
+# Windows：UB-Mannheim 安装时勾选 Chinese (Simplified) 即可
+```
+
 ## 局限（先说清楚）
 
 - **OCR 引擎可换，不是绑死的**：`--ocr-cmd` 接任意引擎。macOS 用系统 Vision（本项目实测
-  11 册 / 1509 页 / 843,595 字 / 0 失败，含渲染约 **2.5 s/页**）；Windows 与 Linux 用 tesseract，
-  见下方[「跨平台」](#跨平台windows--linux)
+  11 册 / 1509 页 / 843,595 字 / 0 失败，含渲染约 **2.5 s/页**）；Windows / Linux 用 tesseract
+  （实测约 5.4 s/页、汉字相似度 90.2%，见[「跨平台」](#跨平台windows--linux)的对比表）
 - **OCR 质量决定上限**：`ocr_quality: low` 的单元，引用时必须提示"OCR 可能有误，请对纸质书"
 - **不保留版式**：表格/公式只抽文本，复杂版面会退化
 - **平台接口是逆向的**：smartedu 的私有 CDN 签名方案随时可能变；只应下载你有权访问的内容
