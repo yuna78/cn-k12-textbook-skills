@@ -238,6 +238,117 @@ def fig_terminal(blocks, out: Path, title: str, sub: str, dark: bool = False) ->
     render(page(body, bg=bg, extra_css=extra), out)
 
 
+# ---------- 06 原页 ↔ md 对照 ----------
+
+def fig_compare(page_png: Path, md_path: Path, out: Path, page_label: str,
+                max_lines: int = 26, proof: list[tuple[str, str]] | None = None) -> None:
+    """左边课本原页（页图），右边同一页 OCR 出来的 md —— 一眼看出这条流水线做了什么。"""
+    import base64
+    from PIL import Image
+
+    # 裁掉四周白边，避免图里大片空白
+    im = Image.open(page_png).convert("RGB")
+    w, h = im.size
+    px = im.load()
+    def row_ink(y):
+        return any(sum(px[x, y]) < 700 for x in range(0, w, 5))
+    def col_ink(x):
+        return any(sum(px[x, y]) < 700 for y in range(0, h, 5))
+    top = next((y for y in range(h) if row_ink(y)), 0)
+    bot = next((y for y in range(h - 1, -1, -1) if row_ink(y)), h - 1)
+    left = next((x for x in range(w) if col_ink(x)), 0)
+    right = next((x for x in range(w - 1, -1, -1) if col_ink(x)), w - 1)
+    im = im.crop((max(0, left - 12), max(0, top - 12),
+                  min(w, right + 12), min(h, bot + 12)))
+    tmp = Path(tempfile.mkdtemp(prefix="cmp-")) / "page.png"
+    im.save(tmp)
+    b64 = base64.b64encode(tmp.read_bytes()).decode()
+
+    text = md_path.read_text(encoding="utf-8")
+    fm, _, body = text.partition("\n---\n")
+    keep_keys = {"id", "title", "book", "source_pages", "pdf_pages", "ocr_quality"}
+    fm_html = []
+    for line in fm.splitlines():
+        if ":" in line:
+            k, v = line.split(":", 1)
+            if k.strip() in keep_keys:
+                fm_html.append(f"<div><span class='k'>{esc(k)}:</span> {esc(v.strip())}</div>")
+    body_html, n = [], 0
+    for line in body.splitlines():
+        t = line.rstrip()
+        if not t:
+            continue
+        if t.startswith("<!-- p."):
+            body_html.append(f"<div class='mark'>{esc(t)}<span class='tip'>← 页码锚点</span></div>")
+        elif t.startswith("# "):
+            continue
+        else:
+            n += 1
+            if n > max_lines:
+                body_html.append("<div class='more'>…（余下正文省略）</div>")
+                break
+            body_html.append(f"<div class='t'>{esc(t)}</div>")
+
+    proof_html = ""
+    if proof:
+        rows = []
+        for cmd, res in proof:          # 别用 out：会覆盖 out_png
+            rows.append(f"<div class='cmd'><span class='ps'>$</span> {esc(cmd)}</div>"
+                        f"<div class='out'>{esc(res)}</div>")
+        proof_html = ("<div class='proof'><div class='pt'>同一份内容，两种取法（实测）</div>"
+                      + "".join(rows) + "</div>")
+    body = f"""
+    <div class="h1">对照：课本原页 ↔ 知识单元 md</div>
+    <div class="h2">同一页、同一条流水线。左边是 PDF 里的页图（<b>没有文字层</b>），
+      右边是 OCR 装配后的 md（页码锚点留在正文里）</div>
+    <div class="two">
+      <div class="col">
+        <div class="cap">① 课本 PDF · {esc(page_label)}（页图，存不了、搜不了）</div>
+        <img src="data:image/png;base64,{b64}">
+      </div>
+      <div class="col">
+        <div class="cap">② 同页 → 知识单元 md（可检索、可引用）</div>
+        <div class="md">
+          <div class="fm">{''.join(fm_html)}</div>
+          <div class="body">{''.join(body_html)}</div>
+        </div>
+      </div>
+    </div>
+    {proof_html}
+    <div class="foot">左边那页搜不到「三角贸易」四个字；右边能搜到，而且每条引用都能落到 <b>p.89</b>。
+      <div class="cr">页图取自国家中小学智慧教育平台的公开电子课本，版权归原出版社；
+      此处仅用于演示 OCR 与检索能力，不提供、不传播教材 PDF 原件。</div></div>"""
+    css = f"""
+    .h1 {{ font-size:31px; font-weight:700; }}
+    .proof {{ margin-top:22px; background:#0b1220; border-radius:10px; padding:16px 20px;
+              font-family:{MONO}; font-size:13.5px; line-height:1.7; }}
+    .proof .pt {{ color:#64748b; font-family:{FONT}; font-size:13px; margin-bottom:8px; }}
+    .proof .cmd {{ color:#e2e8f0; margin-top:8px; }}
+    .proof .ps {{ color:{GREEN}; font-weight:700; }}
+    .proof .out {{ color:#6ee7b7; white-space:pre-wrap; }}
+    .h2 {{ font-size:15px; color:{MUTED}; margin:8px 0 24px; line-height:1.6; }}
+    .two {{ display:flex; gap:26px; align-items:flex-start; }}
+    .col {{ flex:1; }}
+    .cap {{ font-size:14px; color:{MUTED}; margin-bottom:10px; }}
+    img {{ width:100%; border:1px solid {LINE}; border-radius:8px; display:block; }}
+    .md {{ background:#fbfbfc; border:1px solid {LINE}; border-radius:10px; padding:16px 18px; }}
+    .fm {{ font-family:{MONO}; font-size:12.5px; line-height:1.7; color:#334155;
+           background:#0f172a; color:#cbd5e1; border-radius:8px; padding:12px 14px; }}
+    .fm .k {{ color:#7dd3fc; }}
+    .body {{ font-size:14.5px; line-height:1.85; margin-top:12px; color:#262626; }}
+    .mark {{ font-family:{MONO}; font-size:12px; color:{ACCENT}; background:#eff6ff;
+             border-left:3px solid {ACCENT}; padding:5px 9px; margin:10px 0 6px;
+             border-radius:0 5px 5px 0; }}
+    .mark .tip {{ color:{MUTED}; font-family:{FONT}; margin-left:8px; }}
+    .more {{ color:{MUTED}; font-size:13px; }}
+    .foot {{ margin-top:24px; padding-top:14px; border-top:1px solid {LINE};
+             font-size:15px; color:#374151; }}
+    .foot b {{ color:{ACCENT}; }}
+    .cr {{ font-size:12.5px; color:#9ca3af; margin-top:8px; }}
+    """
+    render(page(body, extra_css=css), out)
+
+
 # ---------- 05 结构图 ----------
 
 def fig_flow(out: Path) -> None:
@@ -348,6 +459,8 @@ def main() -> int:
     ap.add_argument("--unit-caption", default=None, help="02 号图副标题")
     ap.add_argument("--redact", action="store_true", help="02 号图把课本正文换成灰条（公开发用）")
     ap.add_argument("--unit-lines", type=int, default=34, help="02 号图正文最多显示多少行（课本用 9 行＝短节选）")
+    ap.add_argument("--page-png", default=None, help="06 号对照图用的课本原页 PNG（pdftoppm 渲染）")
+    ap.add_argument("--page-label", default="p.89", help="06 号图左侧标注，如 p.89")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -464,6 +577,32 @@ def main() -> int:
 
     if not args.only or args.only == "05":
         fig_flow(out / "05-流程与闸门.png")
+
+    if (not args.only or args.only == "06") and args.page_png and args.unit_md:
+        import re as _re
+        unit_md = Path(args.unit_md)
+        # ① 原 PDF 这一页抽不出字（页图）
+        raw = subprocess.run(["pdftotext", "-f", "1", "-l", "1", str(pdf), "-"],
+                             capture_output=True, text=True).stdout
+        n_pdf = len(_re.findall("三角贸易", raw))
+        # ② md 里能搜到
+        n_md = len(_re.findall("三角贸易", unit_md.read_text(encoding="utf-8")))
+        # ③ 检索能给出页码
+        kb_root = unit_md.parent.parent
+        srch = subprocess.run([py, "skills/ask-kb/scripts/kb.py", "--kb", str(kb_root),
+                               "search", "三角贸易", "--top", "1"],
+                              capture_output=True, text=True, cwd=REPO).stdout.strip()
+        first = scrub(srch.splitlines()[0]) if srch else "（无结果）"
+        proof = [
+            ('pdftotext -f 1 -l 1 历史_九上.pdf - | grep -c "三角贸易"',
+             f'{n_pdf}          ← 页图没有文字层，一个字都抽不出来'),
+            ('grep -c "三角贸易" kb/units/历史九上-三角贸易.md',
+             f'{n_md}          ← OCR 之后能搜到 {n_md} 处'),
+            ('python3 kb.py search "三角贸易" --top 1',
+             f'{first}   ← 还带页码，引用能落地'),
+        ]
+        fig_compare(Path(args.page_png), unit_md,
+                    out / "06-课本页对照md.png", args.page_label, proof=proof)
 
     shutil.rmtree(work, ignore_errors=True)
     print(f"\n✅ 素材已生成到 {out}")

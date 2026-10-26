@@ -121,6 +121,16 @@ def main() -> int:
         title = fm.get("title", uid)
         chapter = fm.get("chapter", "")
         pages = split_pages(body)
+        # 首个页码锚点之前的正文（通常是单元标题块）原来会落到 page=0，
+        # 引用时页码就没法用；改成继承本单元第一个已知页码。
+        if pages and pages[0][0] == 0:
+            nxt = next(((pp, pd) for pp, pd, _ in pages if pp > 0), None)
+            if nxt:
+                pages[0] = (nxt[0], nxt[1], pages[0][2])
+            else:
+                first = str(fm.get("source_pages") or fm.get("pdf_pages") or "").split("-")[0]
+                if first.isdigit():
+                    pages[0] = (int(first), None, pages[0][2])
         for printed, pdf, txt in pages:
             total_chars += len(re.sub(r"\s", "", txt))
             for i, ch in enumerate(chunk_page(txt, args.chunk_chars)):

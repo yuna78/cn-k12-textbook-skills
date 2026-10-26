@@ -199,6 +199,8 @@ MIT（见 [LICENSE](LICENSE)）。脚本可自由用于商业项目；**你的�
 - 配图素材包：[docs/material/](docs/material/) —— 五张图都是**跑真实流水线后截图**的，
   改了代码重跑 `docs/material/make_material.py` 即可同步更新
 
+![课本原页 vs 出来的 md](docs/material/06-课本页对照md.png)
+
 ![课本 OCR 出来的知识单元 md](docs/material/02-课本知识单元.png)
 
 ![引文闸门：真的放行，编的拦下](docs/material/04-闸门对比.png)

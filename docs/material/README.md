@@ -10,6 +10,7 @@
 | [`03-检索与引用.png`](03-检索与引用.png) | 真实 judge / search / cite 输出 | 「ask-kb」那节，说明三个命令各拿什么 |
 | [`04-闸门对比.png`](04-闸门对比.png) | 真实 verify：正确引用通过 vs 编造引用被拦下 | **全文最有说服力的一张**，建议放大 |
 | [`05-流程与闸门.png`](05-流程与闸门.png) | 三个 skill + 三道闸门结构图 | 开头或结尾做总览 |
+| [`06-课本页对照md.png`](06-课本页对照md.png) | **左边课本原页 vs 右边同页的 md**，底部附实测证据条（页图 grep=0 / md grep=6 / 检索给 @p89） | **证明 skill 真干活**，建议和 02 相邻放 |
 
 尺寸均为 1240 逻辑像素宽 @2x（实际 2480px），公众号正文宽度够用，点开也清晰。
 
@@ -31,6 +32,12 @@ python3 docs/material/make_material.py \
 
 # 只重做某一张
 python3 docs/material/make_material.py --pdf books/x.pdf --only 04
+
+# 06 号对照图（先渲染原页 PNG，再和 md 并排出图）
+pdftoppm -r 150 -png -f 89 -l 89 books/历史_九年级上册.pdf /tmp/page
+python3 docs/material/make_material.py --pdf books/历史_九年级上册_第89-90页.pdf \
+        --only 06 --unit-md work/kb/units/历史九上-三角贸易.md \
+        --page-png /tmp/page-089.png --page-label "p.89"
 
 # 02 号图用真课本（先跑 extract/segment 得到单元 md，再渲染）
 python3 docs/material/make_material.py --pdf books/历史_九年级上册_第89-90页.pdf \
