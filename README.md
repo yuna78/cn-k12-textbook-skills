@@ -1,8 +1,13 @@
-# pdf2kb
+# cn-k12-textbook-skills
 
-> 三个可组合的 **Agent Skill**：把 PDF 搬下来 → 变成能引用的知识 → 只回答有出处的问答。
+> **中国中小学教材 · AI 技能系列**（Agent Skills for Chinese K-12 textbooks）
+>
+> 三个可组合的 skill：把教材 PDF 搬下来 → 变成能引用的知识 → 只回答有出处的问答。
 >
 > **PDF in, cited answers out.**
+
+适用：人教版 / 沪教版 / 统编版 / 沪科技版，五·四学制与六·三学制均可；
+语数英理化史道法都行 —— 只要是 PDF 教材或老师发的资料，不绑定特定出版社与平台。
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌──────────────────┐
@@ -28,7 +33,7 @@
 # macOS: brew install poppler          Ubuntu: apt install poppler-utils
 # 扫描件另需 OCR：brew install tesseract tesseract-lang（或用 --ocr-cmd 接自己的）
 
-git clone <this-repo> pdf2kb && cd pdf2kb
+git clone <this-repo> cn-k12-textbook-skills && cd cn-k12-textbook-skills
 
 # ① 下载（公开直链；需要登录的资源见 skills/fetch-pdf）
 python3 skills/fetch-pdf/scripts/fetch.py "https://example.com/book.pdf" -o books/book.pdf --resume
