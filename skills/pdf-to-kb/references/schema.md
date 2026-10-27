@@ -10,7 +10,7 @@
 | `subject` | | 学科，用于 `search --subject` 过滤 | `化学` |
 | `book` | | 书名，用于多书合库时区分 | `化学 九年级上册` |
 | `chapter` | | 章节号/名称 | `第四单元` |
-| `source_file` | ✅ | 源 PDF 路径；`kb.py page` 用它渲染 | `books/化学九上.pdf` |
+| `source_file` | ✅ | 源 PDF 路径；问答技能的 `page` 命令用它渲染 | `books/化学九上.pdf` |
 | `pdf_pages` | ✅ | PDF 物理页范围 | `88-113` 或 `5,9-12` |
 | `source_pages` | | **书上印刷页**范围（引用里 `@p` 用的是这个） | `78-103` |
 | `tags` | | 主题词，检索加权用 | `[水, 净化]` |
@@ -40,7 +40,7 @@
 ## 页范围写法
 
 `pdf_pages` / `source_pages` 支持 `a-b` 与逗号混排：`3-5,9,12-14`。
-代码里 `kb.py` 只关心**起点**（用 `pdf_pages` 起点 − `source_pages` 起点 = 固定偏移），
+检索代码只关心**起点**（用 `pdf_pages` 起点 − `source_pages` 起点 = 固定偏移），
 所以**一本书内页码偏移必须一致**；有插页导致偏移不一时，拆成两本书更省事。
 
 ## frontmatter 自检
