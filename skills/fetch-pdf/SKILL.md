@@ -76,7 +76,7 @@ window.pfDownload("<真实URL>", "书名.pdf")
 JSON.stringify(window.__dl)            // {status, received, total, done}
 ```
 
-`fetch_in_page.js` 里**通用的是**：流式 fetch + 进度上报 + `Blob`/`<a download>` 保存。
+`scripts/fetch_in_page.js` 里**通用的是**：流式 fetch + 进度上报 + `Blob`/`<a download>` 保存。
 **站点相关的是**两个函数：`readToken()`（凭证从哪读）和 `authHeader()`（怎么签名）。
 换成别的站点时只改这两个，注释里标了边界。
 

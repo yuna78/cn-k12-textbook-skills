@@ -1,7 +1,7 @@
 # 知识单元规范（frontmatter 字段）
 
-`pdf-to-kb` 产出的每个单元是一个 markdown 文件，YAML frontmatter 固定下列字段。
-下游 `ask-kb` 依赖这些字段做检索、页码换算和引用校验，**改名字会导致工具失效**。
+建库脚本产出的每个单元是一个 markdown 文件，YAML frontmatter 固定下列字段。
+下游的问答工具依赖这些字段做检索、页码换算和引用校验，**改名字会导致工具失效**。
 
 | 字段 | 必填 | 含义 | 例子 |
 |---|---|---|---|
@@ -31,7 +31,7 @@
 
 `<!-- p.书上页 (pdf 物理页) -->` 这一行是**引用校验的锚点**：
 
-- `ask-kb verify` 靠它把「单元 + 页码」落到具体一段文字；
+- 问答工具的 `verify` 靠它把「单元 + 页码」落到具体一段文字；
 - 删掉页标记后，verify 会报「没有第 N 页」，引用就等于没出处。
 
 > 小技巧：如果一本书没有印刷页码（讲义、自编资料），就用 PDF 页号当 `source_pages`，
@@ -46,6 +46,6 @@
 ## frontmatter 自检
 
 ```bash
-python3 ../pdf-to-kb/scripts/build.py --kb kb/ --verify
+python3 scripts/build.py --kb kb/ --verify
 # exit 3 = 有单元缺必填字段，会列出文件名和缺哪个字段
 ```

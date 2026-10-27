@@ -1,6 +1,6 @@
 # 站点适配说明
 
-`fetch-pdf` 本身不绑定任何站点。下面记录已适配的来源，以及**给新站点写适配器要看哪几处**。
+本工具本身不绑定任何站点。下面记录已适配的来源，以及**给新站点写适配器要看哪几处**。
 
 ## 已适配
 
@@ -19,16 +19,16 @@
 **注意**：
 
 - 域名里的 `-private` 不能去掉，去掉会 403。
-- 该平台的教材 PDF 是"电子课本"页图，**没有文字层**——下游 `pdf-to-kb` 会自动走 OCR。
+- 该平台的教材 PDF 是"电子课本"页图，**没有文字层**——下游建库脚本会自动走 OCR。
 - 只有公开阅读权限的内容才应下载；不要把下载后的原文再分发。
 
 ## 给新站点写适配器：改三处
 
 1. **发现真实 URL**：在页面 Network 里找 `*.pdf` 或返回 `application/pdf` 的请求；
    理想情况下能找到"元数据 JSON → 直链"的结构（多数平台都有，比抓页面 DOM 稳定得多）。
-2. **`fetch_in_page.js` 的 `readToken()`**：凭证在 `localStorage` / `sessionStorage` / cookie / 内存变量？
+2. **`scripts/fetch_in_page.js` 的 `readToken()`**：凭证在 `localStorage` / `sessionStorage` / cookie / 内存变量？
    只读取、只在本页使用，**不要 return 给调用方**。
-3. **`fetch_in_page.js` 的 `authHeader()`**：常见几种签名
+3. **`scripts/fetch_in_page.js` 的 `authHeader()`**：常见几种签名
    - HTTP MAC（本仓库已实现，`Authorization/MAC` 系）
    - `Bearer <token>`：直接 `Authorization: Bearer ${token}`
    - URL 签名：`?e=<expire>&token=<hmac>`（注意时间戳单位是秒还是毫秒）
